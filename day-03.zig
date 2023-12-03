@@ -1,6 +1,5 @@
 const std = @import("std");
 const print = std.debug.print;
-const fh = @import("./utils.zig");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var list = std.ArrayList(std.ArrayList(u8)).init(gpa.allocator());
@@ -104,7 +103,6 @@ pub fn part2() !u32 {
         var nextToGear = false;
         var theGear: ?[2]u8 = null;
         for (line.items) |ch| {
-            //print("{d}, {d}, {}\n", .{ i, j, lookAroundForSymbol(i, j) });
             if (std.ascii.isDigit(ch)) {
                 numl[maxIndex] = ch;
                 maxIndex += 1;
@@ -112,7 +110,6 @@ pub fn part2() !u32 {
                 // Look aruond for symbol
                 if (theGear == null) {
                     theGear = adjecentToGear(i, j);
-                    //print("here{any}\n", .{theGear});
                 }
             }
             if (!std.ascii.isDigit(ch) or j == line.items.len - 1) {
