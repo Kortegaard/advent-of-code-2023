@@ -19,7 +19,7 @@ pub fn parseColor(colStr: []const u8) !Color {
 }
 
 pub fn main() !void {
-    var it = try fh.ReaderFileByLine("./input/day-2-input.txt");
+    var it = try fh.ReaderFileByLine("./input/day-02-input.txt");
     var indexSum: u16 = 0;
     const numRedBalls = 12;
     const numGreenBalls = 13;
