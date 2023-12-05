@@ -3,6 +3,15 @@ const print = std.debug.print;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
+fn compareMapStrBySource(context: void, a: []u64, b: []u64) bool {
+    _ = context;
+    if (a[1] < b[1]) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 const mapStr = struct {
     const Self = @This();
 
@@ -22,6 +31,17 @@ const mapStr = struct {
         }
         self.lines.deinit();
         self.allocator.destroy(self);
+    }
+
+    pub fn addLine(self: *mapStr, line: []u64) !void {
+        if (line.len >= 3) {
+            var res: []u64 = try self.allocator.alloc(u64, 3);
+            var it = std.mem.copy(u64, res, line);
+            _ = it;
+            try self.lines.append(res);
+            return;
+        }
+        print("Should not be here, you messed up...\n", .{});
     }
 
     pub fn addLineFromString(self: *mapStr, line: []const u8) !void {
@@ -56,7 +76,83 @@ const mapStr = struct {
 
         return source;
     }
+
+    pub fn sort(self: *mapStr) void {
+        std.sort.insertion([]u64, self.lines.items, {}, compareMapStrBySource);
+    }
+
+    // Returns length of that range
+    pub fn longestRangeStartingAt(self: *mapStr, source: u64) ?u64 {
+        var lowestOver: ?u64 = null;
+
+        for (self.lines.items) |lin| {
+            if (source < lin[1]) {
+                if (lowestOver == null or lowestOver.? > lin[1]) {
+                    lowestOver = lin[1];
+                }
+                continue;
+            }
+            var diff: u64 = source - lin[1];
+            if (diff < lin[2]) {
+                // todo : corr? think so
+                return lin[2] - diff;
+            }
+            //// todo: Could be it should be lin[1] + lin[2] - 1 instead of lin[0]
+            //// But I think it is not necesarry due to if statement above
+            //if (highestUnder == null or highestUnder.? < lin[1]) {
+            //    highestUnder = lin[1] + lin[2] - 1;
+            //}
+        }
+
+        if (lowestOver) |val| {
+            return val - source;
+        }
+        return null;
+    }
 };
+//
+// map1 followed by map2
+pub fn composeMapStr(map1: *mapStr, map2: *mapStr, allocator: std.mem.Allocator) !*mapStr {
+    var res = try mapStr.init(allocator);
+
+    var curr_start: u64 = 0;
+    while (true) {
+        var map1_maxRange: ?u64 = map1.longestRangeStartingAt(curr_start);
+        var map1_curr_dest = map1.findDest(curr_start);
+
+        var map2_maxRange: ?u64 = map2.longestRangeStartingAt(map1_curr_dest);
+        var map2_curr_dest = map2.findDest(map1_curr_dest);
+
+        var minRange: ?u64 = map1_maxRange;
+        if (map1_maxRange == null) {
+            minRange = map2_maxRange;
+        } else if (map2_maxRange != null and map2_maxRange.? < map1_maxRange.?) {
+            minRange = map2_maxRange;
+        }
+        if (minRange == null) {
+            break;
+        }
+        var line = [3]u64{ map2_curr_dest, curr_start, minRange.? };
+        try res.addLine(&line);
+        curr_start += minRange.?;
+    }
+    return res;
+}
+pub fn composeMultipleMapStr(maps: []*mapStr, allocator: std.mem.Allocator) !*mapStr {
+    if (maps.len == 1) {
+        return maps[0];
+    }
+    var res: *mapStr = maps[0];
+    var i: u64 = 1;
+    while (i < maps.len) : (i += 1) {
+        var temp: *mapStr = try composeMapStr(res, maps[i], allocator);
+        if (i > 1) {
+            res.deinit();
+        }
+        res = temp;
+    }
+    return res;
+}
 
 pub fn main() !void {
     defer _ = gpa.deinit();
@@ -85,6 +181,7 @@ pub fn main() !void {
     while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         if (line.len == 0) {
             if (currMap) |cm| {
+                cm.sort();
                 try maps.append(cm);
                 currMap = null;
             }
@@ -111,6 +208,7 @@ pub fn main() !void {
         }
     }
     if (currMap) |cm| {
+        cm.sort();
         try maps.append(cm);
     }
 
@@ -125,18 +223,22 @@ pub fn main() !void {
         }
     }
 
+    var comp: *mapStr = try composeMultipleMapStr(maps.items, gpa.allocator());
+    defer comp.deinit();
     var lowestLocPart2: ?u64 = null;
     var i: u64 = 0;
     while (i < seeds.items.len / 2) : (i += 1) {
         var j: u64 = 0;
-        while (j < seeds.items[2 * i + 1]) : (j += 1) {
-            //print("seed: {d}\n", .{seeds.items[2 * i] + j});
-            var currN: u64 = seeds.items[2 * i] + j;
-            for (maps.items) |mi| {
-                currN = mi.findDest(currN);
-            }
+        while (j < seeds.items[2 * i + 1]) {
+            var currN: u64 = comp.findDest(seeds.items[2 * i] + j);
+            var longestRange = comp.longestRangeStartingAt(seeds.items[2 * i] + j);
             if (lowestLocPart2 == null or currN < lowestLocPart2.?) {
                 lowestLocPart2 = currN;
+            }
+            if (longestRange) |lr| {
+                j += lr;
+            } else {
+                j += 1;
             }
         }
     }
