@@ -97,11 +97,6 @@ const mapStr = struct {
                 // todo : corr? think so
                 return lin[2] - diff;
             }
-            //// todo: Could be it should be lin[1] + lin[2] - 1 instead of lin[0]
-            //// But I think it is not necesarry due to if statement above
-            //if (highestUnder == null or highestUnder.? < lin[1]) {
-            //    highestUnder = lin[1] + lin[2] - 1;
-            //}
         }
 
         if (lowestOver) |val| {
