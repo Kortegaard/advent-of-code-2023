@@ -139,7 +139,6 @@ pub fn main() !void {
                 lowestLocPart2 = currN;
             }
         }
-        print("{d}\n", .{i});
     }
     for (seeds.items) |seed| {
         var currN: u64 = seed;
