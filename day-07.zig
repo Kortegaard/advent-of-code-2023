@@ -4,7 +4,8 @@ const print = std.debug.print;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
 // Rank loves to highest
-const cardOrder = [13]u8{ '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A' };
+const cardOrderPart1 = [13]u8{ '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A' };
+const cardOrderPart2 = [13]u8{ 'J', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'Q', 'K', 'A' };
 
 // Rank loves to highest
 const HandType = enum(u4) {
@@ -17,12 +18,12 @@ const HandType = enum(u4) {
     FiveOfKind = 6,
 };
 
-pub fn handAlphLessThan(a: Hand, b: Hand) bool {
+pub fn handAlphLessThan(a: Hand, b: Hand, cardOrdering: []const u8) bool {
     for (a.cards, 0..) |card, i| {
         if (card == b.cards[i]) {
             continue;
         }
-        for (cardOrder) |c| {
+        for (cardOrdering) |c| {
             if (card == c) {
                 return true;
             }
@@ -42,7 +43,18 @@ pub fn handLessThan(context: void, a: Hand, b: Hand) bool {
     if (@intFromEnum(a.handType()) > @intFromEnum(b.handType())) {
         return false;
     }
-    return handAlphLessThan(a, b);
+    return handAlphLessThan(a, b, &cardOrderPart1);
+}
+
+pub fn handLessThanPart2(context: void, a: Hand, b: Hand) bool {
+    _ = context;
+    if (@intFromEnum(a.handTypePart2()) < @intFromEnum(b.handTypePart2())) {
+        return true;
+    }
+    if (@intFromEnum(a.handTypePart2()) > @intFromEnum(b.handTypePart2())) {
+        return false;
+    }
+    return handAlphLessThan(a, b, &cardOrderPart2);
 }
 
 const Hand = struct {
@@ -60,7 +72,7 @@ const Hand = struct {
     pub fn handType(self: Self) HandType {
         var counted: [13]u8 = [_]u8{0} ** 13;
         for (self.cards) |card| {
-            const index = for (cardOrder, 0..) |c, i| {
+            const index = for (cardOrderPart1, 0..) |c, i| {
                 if (c == card) break i;
             } else unreachable;
             counted[index] += 1;
@@ -90,6 +102,65 @@ const Hand = struct {
         if (numOver[1] > 0) {
             return HandType.OnePair;
         }
+        return HandType.HighCard;
+    }
+
+    pub fn handTypePart2(self: Self) HandType {
+        var counted: [13]u8 = [_]u8{0} ** 13;
+        for (self.cards) |card| {
+            const index = for (cardOrderPart2, 0..) |c, i| {
+                if (c == card) break i;
+            } else unreachable;
+            counted[index] += 1;
+        }
+        // indicates number >= index+1
+        var numOver = [_]u8{0} ** 6;
+        for (counted[1..]) |n| {
+            numOver[n] += 1;
+        }
+        if (numOver[5 - counted[0]] > 0) {
+            return HandType.FiveOfKind;
+        }
+        if (numOver[4 - counted[0]] > 0) {
+            return HandType.FourOfKind;
+        }
+
+        //Without joker
+        if (numOver[3] > 0 and numOver[2] > 0) {
+            return HandType.FullHouse;
+        }
+
+        // If there are 2 jokers, we know there are no pairs,
+        // otherwise it would have qualified for a FourOfKind.
+        // Therefore, 2 jokers can not result in FullHouse
+        if (counted[0] > 2) {
+            unreachable; // otherwise there would be four of kind
+        }
+
+        // If there is one joker, we need there to be 2 pairs
+        // without the joker to give full house
+        if (counted[0] == 1 and numOver[2] > 1) {
+            return HandType.FullHouse;
+        }
+
+        if (numOver[3 - counted[0]] > 0) {
+            return HandType.ThreeOfKind;
+        }
+
+        // Here we check if there is a pair using 'numOver'
+        // but joker is not counted there, so we need to check
+        // for Joker pairs. Notice if there is a joker we have
+        // already seen there can not be a joker and a different
+        // pair at the same time, thus to get two pairs with
+        // at least one joker, there need to be two jokers
+        if (counted[0] > 1 or numOver[2] > 1) {
+            return HandType.TwoPair;
+        }
+
+        if (numOver[2 - counted[0]] > 0) {
+            return HandType.OnePair;
+        }
+
         return HandType.HighCard;
     }
 };
@@ -122,12 +193,17 @@ pub fn main() !void {
     }
 
     std.sort.insertion(Hand, hands.items, {}, handLessThan);
-
-    var sum: u64 = 0;
+    var sumPart1: u64 = 0;
     for (hands.items, 0..) |h, i| {
-        print("{s} - {d}\n", .{ h.cards, h.bet });
-        sum += h.bet * (i + 1);
+        sumPart1 += h.bet * (i + 1);
     }
-    print("Part 1: {d}\n", .{sum});
-    print("Part 2: {?}\n", .{0});
+
+    std.sort.insertion(Hand, hands.items, {}, handLessThanPart2);
+    var sumPart2: u64 = 0;
+    for (hands.items, 0..) |h, i| {
+        sumPart2 += h.bet * (i + 1);
+    }
+
+    print("Part 1: {d}\n", .{sumPart1});
+    print("Part 2: {?}\n", .{sumPart2});
 }
