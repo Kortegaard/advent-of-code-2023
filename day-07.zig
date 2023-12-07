@@ -35,12 +35,12 @@ pub fn handAlphLessThan(a: Hand, b: Hand, cardOrdering: []const u8) bool {
     return false;
 }
 
-pub fn handLessThan(context: void, a: Hand, b: Hand) bool {
+pub fn handLessThanPart1(context: void, a: Hand, b: Hand) bool {
     _ = context;
-    if (@intFromEnum(a.handType()) < @intFromEnum(b.handType())) {
+    if (@intFromEnum(a.handTypePart1()) < @intFromEnum(b.handTypePart1())) {
         return true;
     }
-    if (@intFromEnum(a.handType()) > @intFromEnum(b.handType())) {
+    if (@intFromEnum(a.handTypePart1()) > @intFromEnum(b.handTypePart1())) {
         return false;
     }
     return handAlphLessThan(a, b, &cardOrderPart1);
@@ -69,7 +69,7 @@ const Hand = struct {
         };
     }
 
-    pub fn handType(self: Self) HandType {
+    pub fn handTypePart1(self: Self) HandType {
         var counted: [13]u8 = [_]u8{0} ** 13;
         for (self.cards) |card| {
             const index = for (cardOrderPart1, 0..) |c, i| {
@@ -192,7 +192,7 @@ pub fn main() !void {
         try hands.append(h);
     }
 
-    std.sort.insertion(Hand, hands.items, {}, handLessThan);
+    std.sort.insertion(Hand, hands.items, {}, handLessThanPart1);
     var sumPart1: u64 = 0;
     for (hands.items, 0..) |h, i| {
         sumPart1 += h.bet * (i + 1);
