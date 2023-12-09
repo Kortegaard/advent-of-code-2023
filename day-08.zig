@@ -50,44 +50,43 @@ pub fn main() !void {
 
     var done = false;
     var numSteps: u32 = 0;
-    //var currLoc = [3]u8{ 'A', 'A', 'A' };
-    //while (!done) {
-    //    var nn: u32 = 0;
-    //    for (directions) |d| {
-    //        var Dir = directionHM.get(&currLoc);
-    //        if (Dir == null) {
-    //            continue;
-    //        }
-    //        nn += 1;
-    //        if (d == 'R') {
-    //            currLoc = Dir.?.right;
-    //        } else if (d == 'L') {
-    //            currLoc = Dir.?.left;
-    //        } else {
-    //            break;
-    //        }
-    //        numSteps += 1;
-    //        if (std.mem.startsWith(u8, &currLoc, "ZZZ")) {
-    //            done = true;
-    //        }
-    //    }
-    //}
+    var currLoc = [3]u8{ 'A', 'A', 'A' };
+    while (!done) {
+        var nn: u32 = 0;
+        for (directions) |d| {
+            var Dir = directionHM.get(&currLoc);
+            if (Dir == null) {
+                continue;
+            }
+            nn += 1;
+            if (d == 'R') {
+                currLoc = Dir.?.right;
+            } else if (d == 'L') {
+                currLoc = Dir.?.left;
+            } else {
+                break;
+            }
+            numSteps += 1;
+            if (std.mem.startsWith(u8, &currLoc, "ZZZ")) {
+                done = true;
+            }
+        }
+    }
 
     done = false;
-    var numStepsPart2: u32 = 0;
+    var numStepsPart2: u64 = 0;
     var allEndInZ = false;
-    while (!allEndInZ) {
-        var nn: u32 = 0;
+    var a = [_]u64{0} ** 10;
+    var numFound: u8 = 0;
+    while (!allEndInZ and numFound < ghosts.items.len) {
+        var nn: u64 = 0;
         for (directions) |d| {
             if (d != 'R' and d != 'L') {
                 break;
             }
             allEndInZ = true;
             numStepsPart2 += 1;
-            if (@mod(numStepsPart2, 10000000) == 0) {
-                print("num: {d}\n", .{numStepsPart2});
-            }
-            for (ghosts.items) |ghost| {
+            for (ghosts.items, 0..) |ghost, i| {
                 var Dir = directionHM.get(ghost);
                 if (Dir == null) {
                     continue;
@@ -97,6 +96,10 @@ pub fn main() !void {
                     std.mem.copyForwards(u8, ghost, &Dir.?.right);
                 } else if (d == 'L') {
                     std.mem.copyForwards(u8, ghost, &Dir.?.left);
+                }
+                if (ghost[2] == 'Z' and a[i] == 0) {
+                    a[i] = numStepsPart2;
+                    numFound += 1;
                 }
                 if (ghost[2] != 'Z') {
                     allEndInZ = false;
@@ -108,7 +111,17 @@ pub fn main() !void {
         }
     }
 
-    print("\n", .{});
+    var part2Answer: u64 = 1;
+    var i: u8 = 0;
+    while (i < a.len) : (i += 1) {
+        if (a[i] == 0) {
+            break;
+        }
+        var m: u64 = part2Answer * a[i];
+        var o: u64 = std.math.gcd(part2Answer, a[i]);
+        part2Answer = @divExact(m, o);
+    }
+
     print("Part 1: {d}\n", .{numSteps});
-    print("Part 2: {?}\n", .{numStepsPart2});
+    print("Part 2: {d}\n", .{part2Answer});
 }
