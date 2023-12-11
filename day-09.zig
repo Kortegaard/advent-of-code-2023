@@ -11,11 +11,6 @@ pub fn main() !void {
     var lineItt = try utils.ReaderFileByLine("./input/day-09-input.txt");
     defer lineItt.deinit();
 
-    var directions: [501]u8 = undefined;
-    _ = directions;
-
-    var lineNum: u16 = 0;
-
     var part1Sum: i64 = 0;
     var part2Sum: i64 = 0;
     while (try lineItt.next()) |line| {
@@ -61,7 +56,6 @@ pub fn main() !void {
                 break;
             }
         }
-        lineNum += 1;
     }
 
     print("Part 1: {d}\n", .{part1Sum});
